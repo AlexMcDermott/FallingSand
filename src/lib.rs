@@ -1,5 +1,5 @@
 use wasm_bindgen::prelude::*;
-use web_sys::{console, CanvasRenderingContext2d};
+use web_sys::CanvasRenderingContext2d;
 
 extern crate console_error_panic_hook;
 
@@ -8,18 +8,33 @@ pub fn start() {
   console_error_panic_hook::set_once();
 }
 
-enum Cell {
-  Empty { colour: &'static str },
-  Sand { colour: &'static str },
+#[derive(Clone, Copy)]
+enum CellKind {
+  Empty,
+  Sand,
 }
 
-static EMPTY_CELL: Cell = Cell::Empty { colour: &"FFF4E4" };
+#[derive(Clone, Copy)]
+struct Cell {
+  kind: CellKind,
+  colour: &'static str,
+}
+
+static EMPTY_CELL: Cell = Cell {
+  kind: CellKind::Empty,
+  colour: &"FFF4E4",
+};
+
+static SAND_CELL: Cell = Cell {
+  kind: CellKind::Sand,
+  colour: &"F3C98B",
+};
 
 #[wasm_bindgen]
 pub struct Grid {
   width: u32,
   height: u32,
-  state: Vec<u8>,
+  state: Vec<Cell>,
 }
 
 #[wasm_bindgen]
@@ -29,22 +44,20 @@ impl Grid {
     return Grid {
       width,
       height,
-      state: vec![0; (width * height) as usize],
+      state: vec![EMPTY_CELL; (width * height) as usize],
     };
   }
 
-  pub fn set(&mut self, x: u32, y: u32, value: u8) {
-    self.state[(y * self.width + x) as usize] = value
+  pub fn set(&mut self, x: u32, y: u32) {
+    self.state[(y * self.width + x) as usize] = SAND_CELL;
   }
 
   pub fn render(&self, context: CanvasRenderingContext2d, cell_size: u32) {
     for i in 0..self.state.len() as u32 {
       let x: u32 = i % self.width;
       let y: u32 = i / self.width;
-      match self.state[i as usize] {
-        1 => context.set_fill_style(&"#fff".into()),
-        _ => context.set_fill_style(&"#000".into()),
-      }
+      let cell: Cell = self.state[i as usize];
+      context.set_fill_style(&cell.colour.into());
       context.fill_rect(
         (x * cell_size) as f64,
         (y * cell_size) as f64,

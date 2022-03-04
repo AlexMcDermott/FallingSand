@@ -32,7 +32,7 @@ canvas.addEventListener('mousemove', (event: MouseEvent) => {
   if (event.buttons != 1) return;
   const x = Math.floor((event.offsetX / canvasDisplayWidth) * gridWidth);
   const y = Math.floor((event.offsetY / canvasDisplayHeight) * gridHeight);
-  grid.set(x, y, 1);
+  grid.set(x, y);
 });
 
 function loop() {
