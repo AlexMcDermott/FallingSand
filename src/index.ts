@@ -1,36 +1,46 @@
-import * as PIXI from 'pixi.js';
+import Stats from 'stats.js';
 
 import './styles.css';
-import * as rust from '../pkg';
+import { Grid } from '../pkg';
 
-import Grid from './grid';
-import { CellType } from './cell';
+const stats = new Stats();
+stats.showPanel(0);
+document.body.appendChild(stats.dom);
 
-rust.say_hello();
+const canvasScale = 0.8;
+const cellSize = 10;
 
-const canvasScale = 0.75;
-const gridScale = 10;
-const width = Math.floor((window.innerWidth / gridScale) * canvasScale);
-const height = Math.floor((window.innerHeight / gridScale) * canvasScale);
+const gridWidth = Math.floor((window.innerWidth * canvasScale) / cellSize);
+const gridHeight = Math.floor((window.innerHeight * canvasScale) / cellSize);
+const canvasDisplayWidth = gridWidth * cellSize;
+const canvasDisplayHeight = gridHeight * cellSize;
+const canvasWidth = canvasDisplayWidth * devicePixelRatio;
+const canvasHeight = canvasDisplayHeight * devicePixelRatio;
 
-const config = { width: width * gridScale, height: height * gridScale };
-const app = new PIXI.Application(config);
-const gph = new PIXI.Graphics();
+const canvas = document.getElementById('canvas') as HTMLCanvasElement;
+canvas.style.width = `${canvasDisplayWidth}px`;
+canvas.style.height = `${canvasDisplayHeight}px`;
+canvas.width = canvasWidth;
+canvas.height = canvasHeight;
 
-app.stage.interactive = true;
-document.body.appendChild(app.view);
+const ctx = canvas.getContext('2d');
+ctx.scale(devicePixelRatio, devicePixelRatio);
 
-const grid = new Grid(width, height, gridScale, CellType.Air);
-grid.draw(gph);
-app.stage.addChild(gph);
+const grid = new Grid(gridWidth, gridHeight);
 
-app.stage.on('pointerdown', (e: PIXI.InteractionEvent) => {
-  const x = Math.floor(e.data.global.x / gridScale);
-  const y = Math.floor(e.data.global.y / gridScale);
-  grid.set(x, y, CellType.Sand);
+canvas.addEventListener('mousemove', (event: MouseEvent) => {
+  if (event.buttons != 1) return;
+  const x = Math.floor((event.offsetX / canvasDisplayWidth) * gridWidth);
+  const y = Math.floor((event.offsetY / canvasDisplayHeight) * gridHeight);
+  grid.set(x, y, 1);
 });
 
-app.ticker.add(() => {
-  grid.draw(gph);
-  app.render();
-});
+function loop() {
+  // grid.tick();
+  stats.begin();
+  grid.render(ctx, cellSize);
+  stats.end();
+  requestAnimationFrame(loop);
+}
+
+requestAnimationFrame(loop);

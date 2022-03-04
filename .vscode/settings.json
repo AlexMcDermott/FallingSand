@@ -3,5 +3,8 @@
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.formatOnSave": true,
   "editor.formatOnPaste": true,
-  "cSpell.words": ["bindgen", "markdownlint", "pixi"]
+  "cSpell.words": ["bindgen", "markdownlint", "rect", "rustfmt"],
+  "[rust]": {
+    "editor.defaultFormatter": "rust-lang.rust"
+  }
 }
