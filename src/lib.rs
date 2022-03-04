@@ -20,6 +20,10 @@ struct Cell {
   colour: &'static str,
 }
 
+impl Cell {
+  pub fn update(grid: Grid) {}
+}
+
 static EMPTY_CELL: Cell = Cell {
   kind: CellKind::Empty,
   colour: &"FFF4E4",
@@ -48,8 +52,29 @@ impl Grid {
     };
   }
 
-  pub fn set(&mut self, x: u32, y: u32) {
+  pub fn set_cell(&mut self, x: u32, y: u32) {
     self.state[(y * self.width + x) as usize] = SAND_CELL;
+  }
+
+  fn update_cell(&mut self, index: usize) {
+    let cell: Cell = self.state[index as usize];
+    match cell.kind {
+      CellKind::Sand => {
+        let next_index = index + self.width as usize;
+        if next_index < (self.width * self.height) as usize {
+          let temp = self.state[index];
+          self.state[index] = EMPTY_CELL;
+          self.state[index + self.width as usize] = temp;
+        }
+      }
+      _ => (),
+    }
+  }
+
+  pub fn tick(&mut self) {
+    for i in (0..self.state.len()).rev() {
+      self.update_cell(i);
+    }
   }
 
   pub fn render(&self, context: CanvasRenderingContext2d, cell_size: u32) {

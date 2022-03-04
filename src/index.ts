@@ -32,12 +32,12 @@ canvas.addEventListener('mousemove', (event: MouseEvent) => {
   if (event.buttons != 1) return;
   const x = Math.floor((event.offsetX / canvasDisplayWidth) * gridWidth);
   const y = Math.floor((event.offsetY / canvasDisplayHeight) * gridHeight);
-  grid.set(x, y);
+  grid.set_cell(x, y);
 });
 
 function loop() {
-  // grid.tick();
   stats.begin();
+  grid.tick();
   grid.render(ctx, cellSize);
   stats.end();
   requestAnimationFrame(loop);
