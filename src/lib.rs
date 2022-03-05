@@ -1,3 +1,4 @@
+use std::ops::Sub;
 use wasm_bindgen::prelude::*;
 use web_sys::{console, CanvasRenderingContext2d};
 
@@ -18,6 +19,12 @@ enum CellKind {
 struct Cell {
   kind: CellKind,
   colour: &'static str,
+  outdated: bool,
+}
+
+struct Coordinates {
+  x: u32,
+  y: u32,
 }
 
 #[wasm_bindgen]
@@ -30,11 +37,13 @@ pub struct Grid {
 static EMPTY_CELL: Cell = Cell {
   kind: CellKind::Empty,
   colour: &"FFF4E4",
+  outdated: true,
 };
 
 static SAND_CELL: Cell = Cell {
   kind: CellKind::Sand,
   colour: &"F3C98B",
+  outdated: true,
 };
 
 impl Cell {
@@ -53,6 +62,17 @@ impl Cell {
   }
 }
 
+impl Sub for Coordinates {
+  type Output = Self;
+
+  fn sub(self, other: Self) -> Self::Output {
+    Self {
+      x: (self.x as i32 - other.x as i32).abs() as u32,
+      y: (self.y as i32 - other.y as i32).abs() as u32,
+    }
+  }
+}
+
 #[wasm_bindgen]
 impl Grid {
   #[wasm_bindgen(constructor)]
@@ -62,6 +82,12 @@ impl Grid {
       height,
       state: vec![EMPTY_CELL; (width * height) as usize],
     };
+  }
+
+  fn coords_from_index(&self, index: usize) -> Coordinates {
+    let x: u32 = index as u32 % self.width;
+    let y: u32 = index as u32 / self.width;
+    return Coordinates { x: x, y: y };
   }
 
   fn get_index_below(&self, index: usize) -> usize {
@@ -77,14 +103,10 @@ impl Grid {
   }
 
   fn index_is_nearby(&self, current_index: usize, test_index: usize) -> bool {
-    let current_x: u32 = current_index as u32 % self.width;
-    let current_y: u32 = current_index as u32 / self.width;
-    let test_x: u32 = test_index as u32 % self.width;
-    let test_y: u32 = test_index as u32 / self.width;
-    let delta_x: i32 = current_x as i32 - test_x as i32;
-    let delta_y: i32 = current_y as i32 - test_y as i32;
-    console::log_2(&delta_x.into(), &delta_y.into());
-    return delta_x.abs() <= 1 && delta_y.abs() <= 1;
+    let current_coords: Coordinates = self.coords_from_index(current_index);
+    let test_coords: Coordinates = self.coords_from_index(test_index);
+    let delta: Coordinates = current_coords - test_coords;
+    return delta.x <= 1 && delta.y <= 1;
   }
 
   fn index_available(&self, current_index: usize, test_index: usize) -> bool {
@@ -114,11 +136,12 @@ impl Grid {
     for i in 0..self.state.len() as u32 {
       let x: u32 = i % self.width;
       let y: u32 = i / self.width;
+      let coords: Coordinates = self.coords_from_index(i as usize);
       let cell: Cell = self.state[i as usize];
       context.set_fill_style(&cell.colour.into());
       context.fill_rect(
-        (x * cell_size) as f64,
-        (y * cell_size) as f64,
+        (coords.x * cell_size) as f64,
+        (coords.y * cell_size) as f64,
         cell_size as f64,
         cell_size as f64,
       );
