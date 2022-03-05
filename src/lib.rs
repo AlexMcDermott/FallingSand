@@ -8,13 +8,13 @@ pub fn start() {
   console_error_panic_hook::set_once();
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 enum CellKind {
   Empty,
   Sand,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 struct Cell {
   kind: CellKind,
   colour: &'static str,
@@ -38,15 +38,14 @@ static SAND_CELL: Cell = Cell {
 };
 
 impl Cell {
-  pub fn update_sand(&mut self, grid: &mut Grid, index: u32) {
-    if index + grid.width < grid.width * grid.height {
-      let temp = grid.state[index as usize];
-      grid.state[index as usize] = EMPTY_CELL;
-      grid.state[(index + grid.width) as usize] = temp;
+  fn update_sand(&mut self, grid: &mut Grid, index: usize) {
+    let target_index = grid.get_index_below(index);
+    if grid.index_in_bounds(target_index) && grid.index_available(target_index) {
+      grid.swap_cells(index, target_index)
     }
   }
 
-  pub fn update(&mut self, grid: &mut Grid, index: u32) {
+  fn update(&mut self, grid: &mut Grid, index: usize) {
     match self.kind {
       CellKind::Sand => self.update_sand(grid, index),
       _ => (),
@@ -65,14 +64,32 @@ impl Grid {
     };
   }
 
+  fn get_index_below(&self, index: usize) -> usize {
+    return index + self.width as usize;
+  }
+
+  fn index_in_bounds(&self, index: usize) -> bool {
+    return index < (self.width * self.height) as usize;
+  }
+
+  fn index_available(&self, index: usize) -> bool {
+    return self.state[index] == EMPTY_CELL;
+  }
+
+  fn swap_cells(&mut self, i1: usize, i2: usize) {
+    let temp = self.state[i1];
+    self.state[i1] = self.state[i2];
+    self.state[i2] = temp;
+  }
+
   pub fn set_cell(&mut self, x: u32, y: u32) {
     self.state[(y * self.width + x) as usize] = SAND_CELL;
   }
 
   pub fn tick(&mut self) {
     for i in (0..self.state.len()).rev() {
-      let mut cell: Cell = self.state[i as usize];
-      cell.update(self, i as u32);
+      let mut cell: Cell = self.state[i];
+      cell.update(self, i);
     }
   }
 
