@@ -1,6 +1,6 @@
 use std::ops::Sub;
 use wasm_bindgen::prelude::*;
-use web_sys::{console, CanvasRenderingContext2d};
+use web_sys::CanvasRenderingContext2d;
 
 extern crate console_error_panic_hook;
 
@@ -10,16 +10,49 @@ pub fn start() {
 }
 
 #[derive(Clone, Copy, PartialEq)]
-enum CellKind {
+enum Cell {
   Empty,
   Sand,
 }
 
 #[derive(Clone, Copy, PartialEq)]
-struct Cell {
-  kind: CellKind,
+struct CellData {
+  kind: Cell,
   colour: &'static str,
   outdated: bool,
+}
+
+impl Cell {
+  fn data(&self) -> CellData {
+    match self {
+      Cell::Empty => CellData {
+        kind: Cell::Empty,
+        colour: "FFF4E4",
+        outdated: true,
+      },
+      Cell::Sand => CellData {
+        kind: Cell::Sand,
+        colour: "F3C98B",
+        outdated: true,
+      },
+    }
+  }
+}
+
+impl CellData {
+  fn update_sand(&mut self, grid: &mut Grid, current_index: usize) {
+    let below_index: usize = grid.get_index_below(current_index);
+    if grid.index_available(current_index, below_index) {
+      grid.swap_cells(current_index, below_index)
+    }
+  }
+
+  fn update(&mut self, grid: &mut Grid, index: usize) {
+    match self.kind {
+      Cell::Sand => self.update_sand(grid, index),
+      _ => (),
+    }
+  }
 }
 
 struct Coordinates {
@@ -31,35 +64,7 @@ struct Coordinates {
 pub struct Grid {
   width: u32,
   height: u32,
-  state: Vec<Cell>,
-}
-
-static EMPTY_CELL: Cell = Cell {
-  kind: CellKind::Empty,
-  colour: &"FFF4E4",
-  outdated: true,
-};
-
-static SAND_CELL: Cell = Cell {
-  kind: CellKind::Sand,
-  colour: &"F3C98B",
-  outdated: true,
-};
-
-impl Cell {
-  fn update_sand(&mut self, grid: &mut Grid, current_index: usize) {
-    let below_index = grid.get_index_below(current_index);
-    if grid.index_available(current_index, below_index) {
-      grid.swap_cells(current_index, below_index)
-    }
-  }
-
-  fn update(&mut self, grid: &mut Grid, index: usize) {
-    match self.kind {
-      CellKind::Sand => self.update_sand(grid, index),
-      _ => (),
-    }
-  }
+  state: Vec<CellData>,
 }
 
 impl Sub for Coordinates {
@@ -77,10 +82,13 @@ impl Sub for Coordinates {
 impl Grid {
   #[wasm_bindgen(constructor)]
   pub fn new(width: u32, height: u32) -> Self {
+    let mut state: Vec<CellData> = Vec::with_capacity((width * height) as usize);
+    (0..state.capacity()).for_each(|_| state.push(Cell::Empty.data()));
+
     return Grid {
       width,
       height,
-      state: vec![EMPTY_CELL; (width * height) as usize],
+      state: state,
     };
   }
 
@@ -99,7 +107,7 @@ impl Grid {
   }
 
   fn index_is_empty(&self, index: usize) -> bool {
-    return self.state[index] == EMPTY_CELL;
+    return self.state[index].kind == Cell::Empty;
   }
 
   fn index_is_nearby(&self, current_index: usize, test_index: usize) -> bool {
@@ -116,35 +124,42 @@ impl Grid {
   }
 
   fn swap_cells(&mut self, i1: usize, i2: usize) {
-    let temp = self.state[i1];
-    self.state[i1] = self.state[i2];
-    self.state[i2] = temp;
+    let temp: CellData = self.state[i1];
+    self.set_cell_by_index(i1, self.state[i2]);
+    self.set_cell_by_index(i2, temp);
+  }
+
+  fn set_cell_by_index(&mut self, index: usize, mut cell: CellData) {
+    cell.outdated = true;
+    self.state[index] = cell;
   }
 
   pub fn set_cell(&mut self, x: u32, y: u32) {
-    self.state[(y * self.width + x) as usize] = SAND_CELL;
+    let index: usize = (y * self.width + x) as usize;
+    self.set_cell_by_index(index, Cell::Sand.data())
   }
 
   pub fn tick(&mut self) {
     for i in (0..self.state.len()).rev() {
-      let mut cell: Cell = self.state[i];
+      let mut cell: CellData = self.state[i];
       cell.update(self, i);
     }
   }
 
   pub fn render(&self, context: CanvasRenderingContext2d, cell_size: u32) {
     for i in 0..self.state.len() as u32 {
-      let x: u32 = i % self.width;
-      let y: u32 = i / self.width;
       let coords: Coordinates = self.coords_from_index(i as usize);
-      let cell: Cell = self.state[i as usize];
-      context.set_fill_style(&cell.colour.into());
-      context.fill_rect(
-        (coords.x * cell_size) as f64,
-        (coords.y * cell_size) as f64,
-        cell_size as f64,
-        cell_size as f64,
-      );
+      let mut cell: CellData = self.state[i as usize];
+      if cell.outdated {
+        cell.outdated = false;
+        context.set_fill_style(&cell.colour.into());
+        context.fill_rect(
+          (coords.x * cell_size) as f64,
+          (coords.y * cell_size) as f64,
+          cell_size as f64,
+          cell_size as f64,
+        );
+      }
     }
   }
 }

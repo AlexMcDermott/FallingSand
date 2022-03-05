@@ -36,8 +36,8 @@ canvas.addEventListener('mousemove', (event: MouseEvent) => {
 });
 
 function loop() {
-  stats.begin();
   grid.tick();
+  stats.begin();
   grid.render(ctx, cellSize);
   stats.end();
   requestAnimationFrame(loop);
