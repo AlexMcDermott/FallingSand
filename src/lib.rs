@@ -20,8 +20,11 @@ struct Cell {
   colour: &'static str,
 }
 
-impl Cell {
-  pub fn update(grid: Grid) {}
+#[wasm_bindgen]
+pub struct Grid {
+  width: u32,
+  height: u32,
+  state: Vec<Cell>,
 }
 
 static EMPTY_CELL: Cell = Cell {
@@ -34,11 +37,21 @@ static SAND_CELL: Cell = Cell {
   colour: &"F3C98B",
 };
 
-#[wasm_bindgen]
-pub struct Grid {
-  width: u32,
-  height: u32,
-  state: Vec<Cell>,
+impl Cell {
+  pub fn update_sand(&mut self, grid: &mut Grid, index: u32) {
+    if index + grid.width < grid.width * grid.height {
+      let temp = grid.state[index as usize];
+      grid.state[index as usize] = EMPTY_CELL;
+      grid.state[(index + grid.width) as usize] = temp;
+    }
+  }
+
+  pub fn update(&mut self, grid: &mut Grid, index: u32) {
+    match self.kind {
+      CellKind::Sand => self.update_sand(grid, index),
+      _ => (),
+    }
+  }
 }
 
 #[wasm_bindgen]
@@ -56,24 +69,10 @@ impl Grid {
     self.state[(y * self.width + x) as usize] = SAND_CELL;
   }
 
-  fn update_cell(&mut self, index: usize) {
-    let cell: Cell = self.state[index as usize];
-    match cell.kind {
-      CellKind::Sand => {
-        let next_index = index + self.width as usize;
-        if next_index < (self.width * self.height) as usize {
-          let temp = self.state[index];
-          self.state[index] = EMPTY_CELL;
-          self.state[index + self.width as usize] = temp;
-        }
-      }
-      _ => (),
-    }
-  }
-
   pub fn tick(&mut self) {
     for i in (0..self.state.len()).rev() {
-      self.update_cell(i);
+      let mut cell: Cell = self.state[i as usize];
+      cell.update(self, i as u32);
     }
   }
 
