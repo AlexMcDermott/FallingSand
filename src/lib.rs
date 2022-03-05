@@ -1,5 +1,5 @@
 use wasm_bindgen::prelude::*;
-use web_sys::CanvasRenderingContext2d;
+use web_sys::{console, CanvasRenderingContext2d};
 
 extern crate console_error_panic_hook;
 
@@ -38,10 +38,10 @@ static SAND_CELL: Cell = Cell {
 };
 
 impl Cell {
-  fn update_sand(&mut self, grid: &mut Grid, index: usize) {
-    let target_index = grid.get_index_below(index);
-    if grid.index_in_bounds(target_index) && grid.index_available(target_index) {
-      grid.swap_cells(index, target_index)
+  fn update_sand(&mut self, grid: &mut Grid, current_index: usize) {
+    let below_index = grid.get_index_below(current_index);
+    if grid.index_available(current_index, below_index) {
+      grid.swap_cells(current_index, below_index)
     }
   }
 
@@ -72,8 +72,25 @@ impl Grid {
     return index < (self.width * self.height) as usize;
   }
 
-  fn index_available(&self, index: usize) -> bool {
+  fn index_is_empty(&self, index: usize) -> bool {
     return self.state[index] == EMPTY_CELL;
+  }
+
+  fn index_is_nearby(&self, current_index: usize, test_index: usize) -> bool {
+    let current_x: u32 = current_index as u32 % self.width;
+    let current_y: u32 = current_index as u32 / self.width;
+    let test_x: u32 = test_index as u32 % self.width;
+    let test_y: u32 = test_index as u32 / self.width;
+    let delta_x: i32 = current_x as i32 - test_x as i32;
+    let delta_y: i32 = current_y as i32 - test_y as i32;
+    console::log_2(&delta_x.into(), &delta_y.into());
+    return delta_x.abs() <= 1 && delta_y.abs() <= 1;
+  }
+
+  fn index_available(&self, current_index: usize, test_index: usize) -> bool {
+    return self.index_in_bounds(test_index)
+      && self.index_is_empty(test_index)
+      && self.index_is_nearby(current_index, test_index);
   }
 
   fn swap_cells(&mut self, i1: usize, i2: usize) {

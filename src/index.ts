@@ -8,7 +8,7 @@ stats.showPanel(0);
 document.body.appendChild(stats.dom);
 
 const canvasScale = 0.8;
-const cellSize = 10;
+const cellSize = 5;
 
 const gridWidth = Math.floor((window.innerWidth * canvasScale) / cellSize);
 const gridHeight = Math.floor((window.innerHeight * canvasScale) / cellSize);
